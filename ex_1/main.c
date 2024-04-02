@@ -8,8 +8,8 @@
 
 void readFile()
 {
-    int fileToRead = open ("fileToRead", O_CREAT | O_RDWR, 0666);
-    if (fileToRead > 0) 
+    int fileToRead = open("fileToRead", O_CREAT | O_RDWR, 0666);
+    if (fileToRead > 0)
     {
         printf("fd = %d\n", fileToRead);
     }
@@ -19,33 +19,8 @@ void readFile()
         exit(EXIT_FAILURE);
     }
 
-    size_t total_size = 0;
-    char* buf = malloc(1024 + total_size + 1);
-    ssize_t fileReader;
-
-    while (fileReader = read(fileToRead, buf + total_size, 1024))
-    {
-        if (fileReader == -1)
-        {
-            if (errno == EINTR)
-                continue;
-            close(fileToRead);
-            perror("read");
-            break;
-        }
-        total_size += fileReader;
-        buf = realloc(buf, 1024 + total_size + 1);
-    }
-
-    buf[total_size] = 0;
-    printf("buf = %s\n", buf);
-    printf("total_size = %ld\n", total_size);
-    close(fileToRead);
-
-///////////////////////////////////////////////////////////////////////
-
-    int fileToWrite = open ("fileToWrite", O_CREAT | O_RDWR, 0666);
-    if (fileToWrite > 0) 
+    int fileToWrite = open("fileToWrite", O_CREAT | O_RDWR, 0666);
+    if (fileToWrite > 0)
     {
         printf("fd = %d\n", fileToWrite);
     }
@@ -55,21 +30,47 @@ void readFile()
         exit(EXIT_FAILURE);
     }
 
-    ssize_t fileWriter = write(fileToWrite, buf, total_size);
-    if (fileWriter == -1)
+    size_t len = 1024;
+    char buf[len];
+    ssize_t fileReader;
+    ssize_t fileWriter;
+
+    do
     {
-        close(fileToWrite);
-        perror("write");
-        exit(EXIT_FAILURE);
-    }
+        fileReader = read(fileToRead, buf, len);
+        if (fileReader == -1)
+        {
+            if (errno == EINTR)
+                continue;
+            close(fileToRead);
+            perror("read");
+            break;
+        }
+
+        if (fileReader < len) //записываем последний кусок файла
+        {
+            ssize_t fileWriter = write(fileToWrite, buf, fileReader);
+            if (fileWriter == -1)
+            {
+                close(fileToWrite);
+                perror("write");
+                exit(EXIT_FAILURE);
+            }
+            break;
+        }
+
+        ssize_t fileWriter = write(fileToWrite, buf, len);
+        if (fileWriter == -1)
+        {
+            close(fileToWrite);
+            perror("write");
+            exit(EXIT_FAILURE);
+        }
+    } while (fileReader > 0);
+
+    close(fileToRead);
     close(fileToWrite);
 }
-
-
-
-
-
-
 
 int main()
 {

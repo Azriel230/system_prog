@@ -7,13 +7,13 @@
 #define SIZE 16
 
 
-typedef struct job // структура "Запрос"
+typedef struct job // СЃС‚СЂСѓРєС‚СѓСЂР° "Р—Р°РїСЂРѕСЃ"
 {
     char request[SIZE];
     struct job *next;
 } job;
 
-typedef struct queue_job // структура "Очередь запросов"
+typedef struct queue_job // СЃС‚СЂСѓРєС‚СѓСЂР° "РћС‡РµСЂРµРґСЊ Р·Р°РїСЂРѕСЃРѕРІ"
 {
     job *head;
     job *tail;
@@ -23,10 +23,11 @@ queue_job q = {NULL, NULL};
 sem_t semaphore;
 FILE* resFile;
 pthread_mutex_t mutex;
+pthread_mutex_t mutex1;
 
 void enqueue_job(queue_job *queue, job *new)
 {
-
+	pthread_mutex_lock(&mutex1);
     job *new_job = malloc(sizeof(job));
     strcpy(new_job->request, new->request);
     new_job->next = NULL;
@@ -42,6 +43,7 @@ void enqueue_job(queue_job *queue, job *new)
         queue->tail = new_job;
     }
     sem_post(&semaphore);
+    pthread_mutex_unlock(&mutex1);
 }
 
 job *dequeue_job(queue_job *queue)
@@ -67,7 +69,7 @@ void pregen()
 	FILE* file = fopen("pregen.txt", "w");
 	for (int i = 0; i < 100000; ++i)
 	{
-		fputs("Command №", file);
+		fputs("Command в„–", file);
 		char num[5];
 		sprintf(num, "%d", i);
 		fputs(num, file);
@@ -80,7 +82,6 @@ void readFile(FILE* file)
 	char string[SIZE];
 	while(fgets(string, SIZE, file) != NULL)
 	{
-
 		enqueue_job(&q, string);
 	}	
 }
@@ -110,6 +111,8 @@ int main(int argc, char const *argv[])
 	pregen();	
 	sem_init(&semaphore, 0, 1);
 	pthread_mutex_init(&mutex, NULL);
+	pthread_mutex_init(&mutex1, NULL);
+
 
 
 	resFile = fopen("result.txt", "w");
@@ -124,10 +127,11 @@ int main(int argc, char const *argv[])
 		printf("File is not opened\n");
 		return -1;
 	}
-	readFile(file);	
-	fclose(file);
+	
+	
 
-	int N = atoi(argv[1]);
+	//int N = atoi(argv[1]);
+	int N = 2;
 	if (N <= 0)
 	{
 		perror("input");
@@ -138,7 +142,8 @@ int main(int argc, char const *argv[])
 	{		
 		pthread_create(&threads[i], NULL, threadsInfinity, NULL);
 	}
-	
+	readFile(file);	
+	fclose(file);
 	for (int i = 0; i < N; ++i)
 	{		
 		pthread_join(threads[i], NULL);
